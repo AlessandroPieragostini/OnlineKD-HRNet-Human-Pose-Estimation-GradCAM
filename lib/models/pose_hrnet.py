@@ -39,7 +39,7 @@ class BasicBlock(nn.Module):
         self.stride = stride
 
     def forward(self, x):
-        residual = x
+        residual = x  
 
         out = self.conv1(x)
         out = self.bn1(out)
@@ -62,13 +62,13 @@ class Bottleneck(nn.Module):
 
     def __init__(self, inplanes, planes, stride=1, downsample=None):
         super(Bottleneck, self).__init__()
-        self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False)
+        self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False) #convoluzione puntuale
         self.bn1 = nn.BatchNorm2d(planes, momentum=BN_MOMENTUM)
         self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride,
-                               padding=1, bias=False)
+                               padding=1, bias=False) #convoluzione 3x3
         self.bn2 = nn.BatchNorm2d(planes, momentum=BN_MOMENTUM)
         self.conv3 = nn.Conv2d(planes, planes * self.expansion, kernel_size=1,
-                               bias=False)
+                               bias=False) #convoluzione puntuale
         self.bn3 = nn.BatchNorm2d(planes * self.expansion,
                                   momentum=BN_MOMENTUM)
         self.relu = nn.ReLU(inplace=True)
@@ -146,7 +146,7 @@ class HighResolutionModule(nn.Module):
                     self.num_inchannels[branch_index],
                     num_channels[branch_index] * block.expansion,
                     kernel_size=1, stride=stride, bias=False
-                ),
+                ), #convoluzione puntuale
                 nn.BatchNorm2d(
                     num_channels[branch_index] * block.expansion,
                     momentum=BN_MOMENTUM
@@ -194,44 +194,44 @@ class HighResolutionModule(nn.Module):
         for i in range(num_branches if self.multi_scale_output else 1):
             fuse_layer = []
             for j in range(num_branches):
-                if j > i:
+                if j > i: #quando passo da un branch a bassa risoluzione ad un branch ad alta risoluzione
                     fuse_layer.append(
                         nn.Sequential(
                             nn.Conv2d(
                                 num_inchannels[j],
                                 num_inchannels[i],
                                 1, 1, 0, bias=False
-                            ),
+                            ), #convoluzione puntuale, stride=1, no padding
                             nn.BatchNorm2d(num_inchannels[i]),
-                            nn.Upsample(scale_factor=2**(j-i), mode='nearest')
+                            nn.Upsample(scale_factor=2**(j-i), mode='nearest') 
                         )
                     )
                 elif j == i:
                     fuse_layer.append(None)
-                else:
+                else: #quando passo da un branch as alta risoluzione ad un branch a bassa risoluzione
                     conv3x3s = []
-                    for k in range(i-j):
-                        if k == i - j - 1:
-                            num_outchannels_conv3x3 = num_inchannels[i]
+                    for k in range(i-j): 
+                        if k == i - j - 1: #ultima convoluzione
+                            num_outchannels_conv3x3 = num_inchannels[i] #devo avere la stessa profondità del ramo i
                             conv3x3s.append(
                                 nn.Sequential(
                                     nn.Conv2d(
                                         num_inchannels[j],
                                         num_outchannels_conv3x3,
                                         3, 2, 1, bias=False
-                                    ),
+                                    ), #convoluzione 3x3, stride=2, padding
                                     nn.BatchNorm2d(num_outchannels_conv3x3)
                                 )
                             )
-                        else:
-                            num_outchannels_conv3x3 = num_inchannels[j]
+                        else: #convoluzione intermedia
+                            num_outchannels_conv3x3 = num_inchannels[j] #mantengo la stessa profondità del ramo j di partenza
                             conv3x3s.append(
                                 nn.Sequential(
                                     nn.Conv2d(
                                         num_inchannels[j],
                                         num_outchannels_conv3x3,
                                         3, 2, 1, bias=False
-                                    ),
+                                    ), #convoluzione 3x3, stride=2, padding
                                     nn.BatchNorm2d(num_outchannels_conv3x3),
                                     nn.ReLU(True)
                                 )
